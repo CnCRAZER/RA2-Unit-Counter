@@ -4,7 +4,7 @@ from PySide6.QtGui import QPixmap, QFont, QFontDatabase, QColor
 from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout
 
 # Import the new widget classes
-from DataWidget import MoneyWidget, PowerWidget, NameWidget, FlagWidget, MoneySpentWidget
+from DataWidget import MoneyWidget, PowerWidget, NameWidget, FlagWidget, MoneySpentWidget, NetworkStatsWidget
 
 faction_to_flag = {
     "British": "RA2_Flag_Britain.png",
@@ -36,6 +36,7 @@ class ResourceWindow(QMainWindow):
         power_widget_size = self.hud_positions.get('power_widget_size', 50)
         flag_widget_size = self.hud_positions.get('flag_widget_size', 50)
         money_spent_widget_size = self.hud_positions.get('money_spent_widget_size', 50)
+        network_stats_widget_size = self.hud_positions.get('network_stats_widget_size', 50)
 
         # Load fonts
         font_id = QFontDatabase.addApplicationFont("Other/Futured.ttf")
@@ -86,6 +87,11 @@ class ResourceWindow(QMainWindow):
             size=money_spent_widget_size,
             font=money_font
         )
+        self.network_stats_widget = NetworkStatsWidget(
+            text_color=self.player.color,
+            size=network_stats_widget_size,
+            font=username_font
+        )
 
         if self.combined_mode:
             # Combined mode: Create one composite widget for all resource widgets.
@@ -105,6 +111,8 @@ class ResourceWindow(QMainWindow):
                 layout.addWidget(self.money_spent_widget)
             if self.hud_positions.get('show_power', True):
                 layout.addWidget(self.power_widget)
+            if self.hud_positions.get('show_network_stats', False):
+                layout.addWidget(self.network_stats_widget)
 
             self.setCentralWidget(central_widget)
         else:
@@ -150,12 +158,22 @@ class ResourceWindow(QMainWindow):
             else:
                 self.money_spent_window.hide()
 
+            self.network_stats_window = self.create_window_with_widget(
+                f"Player {player_index} Network Stats", self.network_stats_widget, player_count, 'network_stats',
+                self.player.color_name
+            )
+            if self.hud_positions.get('show_network_stats', False):
+                self.network_stats_window.show()
+            else:
+                self.network_stats_window.hide()
+
             self.windows = [
                 self.name_window,
                 self.money_window,
                 self.money_spent_window,
                 self.power_window,
-                self.flag_window
+                self.flag_window,
+                self.network_stats_window
             ]
 
     def create_window_with_widget(self, title, widget, player_count, hud_type, player_color):
@@ -221,7 +239,7 @@ class ResourceWindow(QMainWindow):
         return default_position
 
     def update_labels(self):
-        """Update the money, money spent, and power values."""
+        """Update the money, money spent, power, and network stats values."""
         self.money_widget.update_data(self.player.balance)
         self.money_spent_widget.update_data(self.player.spent_credit)
         self.power_widget.update_data(self.player.power)
@@ -229,12 +247,14 @@ class ResourceWindow(QMainWindow):
             self.power_widget.update_color(new_image_color=Qt.red, new_text_color=Qt.red)
         else:
             self.power_widget.update_color(new_image_color=Qt.green, new_text_color=Qt.green)
+        self.network_stats_widget.update_data(self.player.net_stats)
 
     def update_all_data_size(self, new_size):
         """Resize all DataWidgets in this ResourceWindow."""
         self.name_widget.update_data_size(new_size)
         self.money_widget.update_data_size(new_size)
         self.power_widget.update_data_size(new_size)
+        self.network_stats_widget.update_data_size(new_size)
 
     def update_money_widget_color(self):
         money_color_option = self.hud_positions.get('money_color', 'Use player color').strip().lower()

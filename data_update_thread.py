@@ -8,7 +8,7 @@ from PySide6.QtCore import QThread, Signal
 import psutil
 
 from process_manager import run_create_players_in_background
-from Player import ProcessExitedException
+from Player import ProcessExitedException, read_and_assign_network_stats
 
 class DataUpdateThread(QThread):
     """
@@ -56,6 +56,11 @@ class DataUpdateThread(QThread):
                     # Attempt memory reads for each player
                     for player in self.state.players:
                         player.update_dynamic_data()
+
+                    # Read network stats if enabled
+                    if self.state.hud_positions.get('show_network_stats', False):
+                        read_and_assign_network_stats(self.state.players, self.state.process_handle)
+
                     self.update_signal.emit()
 
                 except ProcessExitedException:

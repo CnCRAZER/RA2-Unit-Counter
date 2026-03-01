@@ -11,7 +11,11 @@ from constants import (
     MAXPLAYERS, INVALIDCLASS, INFOFFSET, AIRCRAFTOFFSET, TANKOFFSET, BUILDINGOFFSET,
     CREDITSPENT_OFFSET, BALANCEOFFSET, USERNAMEOFFSET, ISWINNEROFFSET,
     POWEROUTPUTOFFSET, HOUSETYPECLASSBASEOFFSET, COUNTRYSTRINGOFFSET, COLORSCHEMEOFFSET,
-    infantry_offsets, tank_offsets, structure_offsets, aircraft_offsets
+    infantry_offsets, tank_offsets, structure_offsets, aircraft_offsets,
+    IPXMANAGER_BASE, IPXMANAGER_CONN_COUNT_OFFSET, IPXMANAGER_CONN_ARRAY_OFFSET,
+    CONN_QUEUE_PTR_OFFSET, CONN_RESENDS_OFFSET, CONN_LOST_OFFSET, CONN_PCT_LOST_OFFSET,
+    CONN_HOUSE_INDEX_OFFSET, QUEUE_AVG_RESPONSE_OFFSET, QUEUE_MAX_RESPONSE_OFFSET,
+    RESPONSE_TICKS_TO_MS_NUM, RESPONSE_TICKS_TO_MS_DEN
 )
 from factory import QueuedFactory, BuildingFactory
 from memory_utils import read_process_memory
@@ -60,6 +64,15 @@ class Player:
         self.building_array_ptr = None
         self.infantry_array_ptr = None
         self.aircraft_array_ptr = None
+
+        # Network stats (populated by read_and_assign_network_stats)
+        self.net_stats = {
+            'avg_ping_ms': 0,
+            'max_ping_ms': 0,
+            'resends': 0,
+            'lost': 0,
+            'pct_lost': 0,
+        }
 
         # Test addresses for validation
         self.test_addresses = {
@@ -401,3 +414,104 @@ def initialize_players_after_loading(game_data, process_handle):
 
     logging.info(f"Number of valid players: {valid_player_count}")
     return valid_player_count
+
+
+def read_and_assign_network_stats(players, process_handle):
+    """
+    Read network stats from the IPXManager structure and assign to matching players.
+
+    IPXManager at 0xA8E9C0 holds a connection array. Each connection has a
+    house index that maps to a player slot, plus stats sub-objects with
+    response times, resend counts, and packet loss data.
+    """
+    try:
+        # Read connection count (DWORD at IPXManager + 68)
+        conn_count_data = read_process_memory(
+            process_handle, IPXMANAGER_BASE + IPXMANAGER_CONN_COUNT_OFFSET, 4
+        )
+        if not conn_count_data:
+            return
+        conn_count = int.from_bytes(conn_count_data, byteorder='little')
+        if conn_count == 0 or conn_count > 7:
+            return
+
+        # Read all connection pointers at once (4 bytes each, starting at IPXManager + 40)
+        conn_ptrs_data = read_process_memory(
+            process_handle,
+            IPXMANAGER_BASE + IPXMANAGER_CONN_ARRAY_OFFSET,
+            conn_count * 4
+        )
+        if not conn_ptrs_data or len(conn_ptrs_data) < conn_count * 4:
+            return
+
+        # Build a dict mapping player index (0-based house index) -> Player
+        player_by_house = {}
+        for p in players:
+            # Player.index is 1-based slot position
+            player_by_house[p.index - 1] = p
+
+        for i in range(conn_count):
+            conn_ptr = int.from_bytes(conn_ptrs_data[i*4:(i+1)*4], byteorder='little')
+            if conn_ptr == 0:
+                continue
+
+            # Read house index, resends, lost, pct_lost, and queue pointer in one chunk
+            # We need offsets 4 (queue ptr), 8 (resends), 12 (lost), 16 (pct_lost), 100 (house idx)
+            # Read bytes 0..103 (104 bytes) to cover everything up to house index
+            conn_data = read_process_memory(process_handle, conn_ptr, 104)
+            if not conn_data or len(conn_data) < 104:
+                continue
+
+            house_index = int.from_bytes(
+                conn_data[CONN_HOUSE_INDEX_OFFSET:CONN_HOUSE_INDEX_OFFSET + 4],
+                byteorder='little'
+            )
+            resends = int.from_bytes(
+                conn_data[CONN_RESENDS_OFFSET:CONN_RESENDS_OFFSET + 4],
+                byteorder='little'
+            )
+            lost = int.from_bytes(
+                conn_data[CONN_LOST_OFFSET:CONN_LOST_OFFSET + 4],
+                byteorder='little'
+            )
+            pct_lost = int.from_bytes(
+                conn_data[CONN_PCT_LOST_OFFSET:CONN_PCT_LOST_OFFSET + 4],
+                byteorder='little'
+            )
+            queue_ptr = int.from_bytes(
+                conn_data[CONN_QUEUE_PTR_OFFSET:CONN_QUEUE_PTR_OFFSET + 4],
+                byteorder='little'
+            )
+
+            # Read response times from queue sub-object
+            avg_ping_ticks = 0
+            max_ping_ticks = 0
+            if queue_ptr != 0:
+                # Read 8 bytes starting at offset 28 to get both avg (28) and max (32)
+                queue_data = read_process_memory(
+                    process_handle, queue_ptr + QUEUE_AVG_RESPONSE_OFFSET, 8
+                )
+                if queue_data and len(queue_data) >= 8:
+                    avg_ping_ticks = int.from_bytes(queue_data[0:4], byteorder='little')
+                    max_ping_ticks = int.from_bytes(queue_data[4:8], byteorder='little')
+
+            # Convert ticks to milliseconds
+            avg_ping_ms = avg_ping_ticks * RESPONSE_TICKS_TO_MS_NUM // RESPONSE_TICKS_TO_MS_DEN
+            max_ping_ms = max_ping_ticks * RESPONSE_TICKS_TO_MS_NUM // RESPONSE_TICKS_TO_MS_DEN
+
+            # Assign to the matching player
+            player = player_by_house.get(house_index)
+            if player:
+                player.net_stats = {
+                    'avg_ping_ms': avg_ping_ms,
+                    'max_ping_ms': max_ping_ms,
+                    'resends': resends,
+                    'lost': lost,
+                    'pct_lost': pct_lost,
+                }
+
+    except ProcessExitedException:
+        raise
+    except Exception as e:
+        logging.error(f"Exception in read_and_assign_network_stats: {e}")
+        traceback.print_exc()
