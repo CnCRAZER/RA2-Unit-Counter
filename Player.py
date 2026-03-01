@@ -423,6 +423,10 @@ def read_and_assign_network_stats(players, process_handle):
     IPXManager at 0xA8E9C0 holds a connection array. Each connection has a
     house index that maps to a player slot, plus stats sub-objects with
     response times, resend counts, and packet loss data.
+
+    In CnCNet tunnel mode, conn_count is typically 1 (all traffic goes through
+    one tunnel). In that case, broadcast the tunnel stats to ALL players.
+    In direct peer-to-peer mode, assign per-connection stats to each player.
     """
     try:
         # Read connection count (DWORD at IPXManager + 68)
@@ -432,6 +436,7 @@ def read_and_assign_network_stats(players, process_handle):
         if not conn_count_data:
             return
         conn_count = int.from_bytes(conn_count_data, byteorder='little')
+        logging.debug(f"net_stats: conn_count={conn_count}")
         if conn_count == 0 or conn_count > 7:
             return
 
@@ -447,17 +452,17 @@ def read_and_assign_network_stats(players, process_handle):
         # Build a dict mapping player index (0-based house index) -> Player
         player_by_house = {}
         for p in players:
-            # Player.index is 1-based slot position
             player_by_house[p.index - 1] = p
+
+        # Determine if we're in tunnel mode (single connection for all players)
+        tunnel_mode = (conn_count == 1)
 
         for i in range(conn_count):
             conn_ptr = int.from_bytes(conn_ptrs_data[i*4:(i+1)*4], byteorder='little')
             if conn_ptr == 0:
                 continue
 
-            # Read house index, resends, lost, pct_lost, and queue pointer in one chunk
-            # We need offsets 4 (queue ptr), 8 (resends), 12 (lost), 16 (pct_lost), 100 (house idx)
-            # Read bytes 0..103 (104 bytes) to cover everything up to house index
+            # Read connection data: offsets 4, 8, 12, 16 for queue/stats, 100 for house index
             conn_data = read_process_memory(process_handle, conn_ptr, 104)
             if not conn_data or len(conn_data) < 104:
                 continue
@@ -487,7 +492,6 @@ def read_and_assign_network_stats(players, process_handle):
             avg_ping_ticks = 0
             max_ping_ticks = 0
             if queue_ptr != 0:
-                # Read 8 bytes starting at offset 28 to get both avg (28) and max (32)
                 queue_data = read_process_memory(
                     process_handle, queue_ptr + QUEUE_AVG_RESPONSE_OFFSET, 8
                 )
@@ -499,16 +503,27 @@ def read_and_assign_network_stats(players, process_handle):
             avg_ping_ms = avg_ping_ticks * RESPONSE_TICKS_TO_MS_NUM // RESPONSE_TICKS_TO_MS_DEN
             max_ping_ms = max_ping_ticks * RESPONSE_TICKS_TO_MS_NUM // RESPONSE_TICKS_TO_MS_DEN
 
-            # Assign to the matching player
-            player = player_by_house.get(house_index)
-            if player:
-                player.net_stats = {
-                    'avg_ping_ms': avg_ping_ms,
-                    'max_ping_ms': max_ping_ms,
-                    'resends': resends,
-                    'lost': lost,
-                    'pct_lost': pct_lost,
-                }
+            stats = {
+                'avg_ping_ms': avg_ping_ms,
+                'max_ping_ms': max_ping_ms,
+                'resends': resends,
+                'lost': lost,
+                'pct_lost': pct_lost,
+            }
+
+            logging.debug(f"net_stats: conn[{i}] house_idx={house_index} avg={avg_ping_ms}ms max={max_ping_ms}ms resends={resends} lost={lost} pct={pct_lost}")
+
+            if tunnel_mode:
+                # CnCNet tunnel: broadcast same stats to all players
+                for player in players:
+                    player.net_stats = stats.copy()
+                logging.debug(f"net_stats: Tunnel broadcast to all {len(players)} players")
+            else:
+                # Direct connection: assign to matching player by house index
+                player = player_by_house.get(house_index)
+                if player:
+                    player.net_stats = stats
+                    logging.debug(f"net_stats: Assigned to player idx={player.index} name={player.username.value}")
 
     except ProcessExitedException:
         raise

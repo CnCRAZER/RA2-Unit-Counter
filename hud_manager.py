@@ -382,7 +382,7 @@ def update_huds(state):
                         uw.update_labels()
                 else:
                     unit_window.update_labels()
-            elif resource_window is not None:
+            if resource_window is not None:
                 resource_window.update_labels()
         # Update factory windows as well.
         if hasattr(state, 'factory_windows'):

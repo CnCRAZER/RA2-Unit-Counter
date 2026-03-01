@@ -2,7 +2,7 @@
 import logging
 from PySide6.QtCore import Qt, QPropertyAnimation
 from PySide6.QtGui import QPixmap, QColor, QPainter, QFont, QFontMetrics
-from PySide6.QtWidgets import QWidget, QLabel, QHBoxLayout
+from PySide6.QtWidgets import QWidget, QLabel, QHBoxLayout, QVBoxLayout
 
 class BaseDataWidget(QWidget):
     def __init__(self, data=None, text_color=Qt.black, size=16, font=None, use_fixed_width=False, max_digits=10, parent=None):
@@ -368,8 +368,11 @@ class MoneySpentWidget(BaseDataWidget):
 
 class NetworkStatsWidget(QWidget):
     """
-    Displays MPDEBUG-style network stats: Ping, Resends, Packet Loss.
-    Format: "Ping: Xms | R: Y | L: Z%"
+    Displays MPDEBUG-style network stats in a multi-line format:
+    Average Ping: X
+    Highest Ping: X
+    Packets Lost: X
+    Packets Resent: X
     """
     def __init__(self, text_color=Qt.white, size=16, font=None, parent=None):
         super().__init__(parent)
@@ -384,12 +387,12 @@ class NetworkStatsWidget(QWidget):
         self.pct_lost = 0
 
         self.data_label = QLabel("", self)
-        self.data_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        self.data_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
 
-        self.layout = QHBoxLayout(self)
+        self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setSpacing(0)
-        self.layout.addWidget(self.data_label, alignment=Qt.AlignVCenter)
+        self.layout.addWidget(self.data_label, alignment=Qt.AlignTop)
 
         self.update_font_size()
         self._update_text()
@@ -406,9 +409,14 @@ class NetworkStatsWidget(QWidget):
 
     def _update_text(self):
         try:
-            text = f"Ping: {self.avg_ping}ms | R: {self.resends} | L: {self.pct_lost}%"
+            text = (
+                f"Average Ping: {self.avg_ping}\n"
+                f"Highest Ping: {self.max_ping}\n"
+                f"Packets Lost: {self.lost}\n"
+                f"Packets Resent: {self.resends}"
+            )
             self.data_label.setText(text)
-            self.data_label.setStyleSheet(f"color: {self.text_color.name()}; margin-top: -2px;")
+            self.data_label.setStyleSheet(f"color: {self.text_color.name()};")
             self.data_label.adjustSize()
         except Exception as e:
             logging.exception("Error updating text in NetworkStatsWidget: %s", e)
@@ -449,8 +457,11 @@ class NetworkStatsWidget(QWidget):
     def adjust_size(self):
         try:
             fm = QFontMetrics(self.data_label.font())
-            text_width = fm.horizontalAdvance(self.data_label.text())
-            total_height = self.data_label.height()
+            lines = self.data_label.text().split('\n')
+            text_width = max(fm.horizontalAdvance(line) for line in lines) if lines else 0
+            line_height = fm.height()
+            total_height = line_height * len(lines)
+            self.data_label.setFixedSize(text_width + 2, total_height)
             self.setFixedSize(text_width + 2, total_height)
         except Exception as e:
             logging.exception("Error adjusting size in NetworkStatsWidget: %s", e)
