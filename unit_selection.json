@@ -268,7 +268,9 @@
                 "Grizzly Battle Tank": {
                     "selected": true,
                     "unit_type": "Tank",
-                    "faction": "Allied"
+                    "faction": "Allied",
+                    "position": 0,
+                    "locked": false
                 }
             },
             "Naval": {
@@ -314,7 +316,7 @@
                     "locked": false,
                     "unit_type": "Aircraft",
                     "faction": "Allied",
-                    "position": -1
+                    "position": 0
                 },
                 "Harrier": {
                     "selected": false,
@@ -574,7 +576,7 @@
                     "locked": false,
                     "unit_type": "Tank",
                     "faction": "Soviet",
-                    "position": -1
+                    "position": 0
                 },
                 "Siege Chopper": {
                     "selected": false,
@@ -642,7 +644,9 @@
                 "Soviet Siege Chopper": {
                     "selected": true,
                     "unit_type": "Tank",
-                    "faction": "Soviet"
+                    "faction": "Soviet",
+                    "position": 1,
+                    "locked": false
                 }
             },
             "Naval": {
