@@ -2,7 +2,7 @@
 import logging
 from PySide6.QtCore import Qt, QPropertyAnimation
 from PySide6.QtGui import QPixmap, QColor, QPainter, QFont, QFontMetrics
-from PySide6.QtWidgets import QWidget, QLabel, QHBoxLayout
+from PySide6.QtWidgets import QWidget, QLabel, QHBoxLayout, QVBoxLayout
 
 class BaseDataWidget(QWidget):
     def __init__(self, data=None, text_color=Qt.black, size=16, font=None, use_fixed_width=False, max_digits=10, parent=None):
@@ -380,4 +380,105 @@ class MoneySpentWidget(BaseDataWidget):
             self.setFixedSize(total_width, total_height)
         except Exception as e:
             logging.exception("Error adjusting size in MoneySpentWidget: %s", e)
+
+
+class NetworkStatsWidget(QWidget):
+    """
+    Displays MPDEBUG-style network stats in a multi-line format:
+    Average Ping: X
+    Highest Ping: X
+    Packets Lost: X
+    Packets Resent: X
+    """
+    def __init__(self, text_color=Qt.white, size=16, font=None, parent=None):
+        super().__init__(parent)
+        self.size = size
+        self.text_color = QColor(text_color)
+        self.custom_font = font if font is not None else QFont()
+
+        self.avg_ping = 0
+        self.max_ping = 0
+        self.resends = 0
+        self.lost = 0
+        self.pct_lost = 0
+
+        self.data_label = QLabel("", self)
+        self.data_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+
+        self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setSpacing(0)
+        self.layout.addWidget(self.data_label, alignment=Qt.AlignTop)
+
+        self.update_font_size()
+        self._update_text()
+        self.adjust_size()
+
+    def update_font_size(self):
+        try:
+            font = self.custom_font
+            font.setPointSize(int(self.size * 0.5))
+            self.data_label.setFont(font)
+            self.data_label.adjustSize()
+        except Exception as e:
+            logging.exception("Error updating font size in NetworkStatsWidget: %s", e)
+
+    def _update_text(self):
+        try:
+            text = (
+                f"Average Ping: {self.avg_ping}\n"
+                f"Highest Ping: {self.max_ping}\n"
+                f"Packets Lost: {self.lost}\n"
+                f"Packets Resent: {self.resends}"
+            )
+            self.data_label.setText(text)
+            self.data_label.setStyleSheet(f"color: {self.text_color.name()};")
+            self.data_label.adjustSize()
+        except Exception as e:
+            logging.exception("Error updating text in NetworkStatsWidget: %s", e)
+
+    def update_data(self, net_stats):
+        """
+        Update with a net_stats dict: {avg_ping_ms, max_ping_ms, resends, lost, pct_lost}
+        """
+        try:
+            self.avg_ping = net_stats.get('avg_ping_ms', 0)
+            self.max_ping = net_stats.get('max_ping_ms', 0)
+            self.resends = net_stats.get('resends', 0)
+            self.lost = net_stats.get('lost', 0)
+            self.pct_lost = net_stats.get('pct_lost', 0)
+            self._update_text()
+            self.adjust_size()
+        except Exception as e:
+            logging.exception("Error updating data in NetworkStatsWidget: %s", e)
+
+    def update_data_size(self, new_size):
+        try:
+            self.size = new_size
+            self.update_font_size()
+            self._update_text()
+            self.adjust_size()
+        except Exception as e:
+            logging.exception("Error updating data size in NetworkStatsWidget: %s", e)
+
+    def update_color(self, new_text_color=None):
+        try:
+            if new_text_color is not None:
+                self.text_color = QColor(new_text_color)
+                self._update_text()
+                self.adjust_size()
+        except Exception as e:
+            logging.exception("Error updating color in NetworkStatsWidget: %s", e)
+
+    def adjust_size(self):
+        try:
+            fm = QFontMetrics(self.data_label.font())
+            lines = self.data_label.text().split('\n')
+            text_width = max(fm.horizontalAdvance(line) for line in lines) if lines else 0
+            line_height = fm.height()
+            total_height = line_height * len(lines)
+            self.data_label.setFixedSize(text_width + 2, total_height)
+            self.setFixedSize(text_width + 2, total_height)
+        except Exception as e:
+            logging.exception("Error adjusting size in NetworkStatsWidget: %s", e)
 

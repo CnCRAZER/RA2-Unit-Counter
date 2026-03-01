@@ -31,6 +31,29 @@ COLORSCHEMEOFFSET = 0x16054
 # offset for number of war factories
 NUMBEROFWFOFFSET = 0x160
 
+# ---------------------------------------------------------------------------
+# IPXManager network stats offsets (for MPDEBUG-style ping/packet loss display)
+# ---------------------------------------------------------------------------
+IPXMANAGER_BASE = 0xA8E9C0
+IPXMANAGER_CONN_COUNT_OFFSET = 68      # byte offset: number of connections (DWORD)
+IPXMANAGER_CONN_ARRAY_OFFSET = 40      # byte offset: start of connection pointer array
+
+# Per-connection object offsets (byte offsets from dereferenced connection pointer)
+CONN_QUEUE_PTR_OFFSET = 4              # pointer to send queue / stats sub-object
+CONN_RESENDS_OFFSET = 8                # cumulative resend count (DWORD)
+CONN_LOST_OFFSET = 12                  # cumulative lost packet count (DWORD)
+CONN_PCT_LOST_OFFSET = 16              # percent lost (DWORD)
+CONN_HOUSE_INDEX_OFFSET = 100          # house/player index in vec_Houses (DWORD)
+CONN_NAME_OFFSET = 104                 # player name (ASCII char[])
+
+# Queue sub-object offsets (byte offsets from dereferenced queue pointer)
+QUEUE_AVG_RESPONSE_OFFSET = 28         # average response time in game ticks (DWORD)
+QUEUE_MAX_RESPONSE_OFFSET = 32         # max response time in game ticks (DWORD)
+
+# Conversion factor: game_ticks * RESPONSE_TICKS_TO_MS = milliseconds
+RESPONSE_TICKS_TO_MS_NUM = 1000
+RESPONSE_TICKS_TO_MS_DEN = 60
+
 #---------------------------------------------
 #all the new factory offsets here:
 

@@ -57,6 +57,8 @@ def load_hud_positions(state):
         'separate_unit_counters': False,
         'show_money_spent': False,
         'money_spent_widget_size': 50,
+        'show_network_stats': False,
+        'network_stats_widget_size': 50,
         'combined_hud': False,    # False: separate HUD; True: combined HUD.
         # --- New defaults for factory windows ---
         'show_factory_window': True,
@@ -194,6 +196,11 @@ def save_hud_positions(state):
                 value = safe_widget_value(cp.show_factory_checkbox, 'isChecked', state.hud_positions.get('show_factory_window', True))
                 if value is not None:
                     state.hud_positions['show_factory_window'] = value
+
+            if hasattr(cp, 'show_network_stats_checkbox'):
+                value = safe_widget_value(cp.show_network_stats_checkbox, 'isChecked', state.hud_positions.get('show_network_stats', False))
+                if value is not None:
+                    state.hud_positions['show_network_stats'] = value
 
         if hasattr(state, 'control_panel') and state.control_panel and hasattr(state.control_panel, 'path_edit'):
             try:
@@ -375,7 +382,7 @@ def update_huds(state):
                         uw.update_labels()
                 else:
                     unit_window.update_labels()
-            elif resource_window is not None:
+            if resource_window is not None:
                 resource_window.update_labels()
         # Update factory windows as well.
         if hasattr(state, 'factory_windows'):

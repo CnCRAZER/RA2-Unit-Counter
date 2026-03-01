@@ -570,6 +570,11 @@ class ControlPanel(QMainWindow):
         self.show_money_spent_checkbox.setChecked(self.state.hud_positions.get('show_money_spent', True))
         self.show_money_spent_checkbox.stateChanged.connect(self.toggle_money_spent)
         visibility_layout.addRow(self.show_money_spent_checkbox)
+
+        self.show_network_stats_checkbox = QCheckBox("Show Network Stats (Ping/Packet Loss)")
+        self.show_network_stats_checkbox.setChecked(self.state.hud_positions.get('show_network_stats', False))
+        self.show_network_stats_checkbox.stateChanged.connect(self.toggle_network_stats)
+        visibility_layout.addRow(self.show_network_stats_checkbox)
         
         visibility_group.setLayout(visibility_layout)
         layout.addWidget(visibility_group)
@@ -713,6 +718,9 @@ class ControlPanel(QMainWindow):
     def toggle_money_spent(self, state_val):
         self.toggle_hud_element('show_money_spent', 'money_widget_spent', state_val)
 
+    def toggle_network_stats(self, state_val):
+        self.toggle_hud_element('show_network_stats', 'network_stats_widget', state_val)
+
     def toggle_power(self, state_val):
         self.toggle_hud_element('show_power', 'power_widget', state_val)
 
@@ -733,7 +741,8 @@ class ControlPanel(QMainWindow):
             'money_widget': 2,
             'money_widget_spent': 3,
             'power_widget': 4,
-            'unit_widget': 5
+            'unit_widget': 5,
+            'network_stats_widget': 6
         }
         fixed_index = fixed_positions.get(widget_name, None)
         if fixed_index is None:
@@ -755,6 +764,8 @@ class ControlPanel(QMainWindow):
                         target_widget = combined_window.resource_widget.money_spent_widget
                     elif widget_name == 'power_widget':
                         target_widget = combined_window.resource_widget.power_widget
+                    elif widget_name == 'network_stats_widget':
+                        target_widget = combined_window.resource_widget.network_stats_widget
                     else:
                         continue
                 self.update_combined_widget(parent, target_widget, fixed_index, state_val == 2)
@@ -764,7 +775,8 @@ class ControlPanel(QMainWindow):
                 'money_widget': 1,
                 'money_widget_spent': 2,
                 'power_widget': 3,
-                'flag_widget': 4
+                'flag_widget': 4,
+                'network_stats_widget': 5
             }
             index = index_mapping.get(widget_name)
             if index is not None:
