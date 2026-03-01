@@ -45,6 +45,8 @@ class FactoryWidget(CounterWidgetBase):
         pixmap = QPixmap(image_path)
         if pixmap.isNull():
             logging.error(f"Image not found for unit: {unit_name}")
+            self.scaled_pixmap = QPixmap()
+            return
         self.scaled_pixmap = pixmap.scaled(
             self.size, self.size,
             Qt.KeepAspectRatio,

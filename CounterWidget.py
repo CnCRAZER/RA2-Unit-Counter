@@ -49,6 +49,9 @@ class CounterWidgetImageOnly(CounterWidgetBase):
 
     def update_image_size(self):
         pixmap = QPixmap(self.image_path)
+        if pixmap.isNull():
+            self.scaled_pixmap = QPixmap()
+            return
         self.scaled_pixmap = pixmap.scaled(self.size, self.size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         self.setFixedSize(self.scaled_pixmap.size())
 
@@ -125,6 +128,9 @@ class CounterWidgetImagesAndNumber(CounterWidgetBase):
 
     def update_image_size(self):
         pixmap = QPixmap(self.image_path)
+        if pixmap.isNull():
+            self.scaled_pixmap = QPixmap()
+            return
         self.scaled_pixmap = pixmap.scaled(self.size, self.size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         self.setFixedSize(self.scaled_pixmap.size())
 

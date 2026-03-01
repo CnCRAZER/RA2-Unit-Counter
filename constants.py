@@ -212,6 +212,14 @@ COLOR_SCHEME_MAPPING = {
     21: QColor("blue"),
     25: QColor("cyan"),
     29: QColor("green"),
+    39: QColor(200, 170, 140),   # Camel
+    41: QColor(180, 10, 90),     # Crimson
+    43: QColor(0, 128, 128),     # Teal
+    45: QColor(180, 250, 40),    # Pistachio
+    47: QColor(150, 85, 30),     # Brown
+    49: QColor(180, 255, 220),   # Mint
+    51: QColor(250, 25, 250),    # NewMagenta
+    53: QColor(190, 160, 255),   # Periwinkle
 }
 
 # Mapping of color scheme values to friendly color names.
@@ -226,6 +234,14 @@ COLOR_NAME_MAPPING = {
     21: "blue",
     25: "cyan",
     29: "green",
+    39: "camel",
+    41: "crimson",
+    43: "teal",
+    45: "pistachio",
+    47: "brown",
+    49: "mint",
+    51: "newmagenta",
+    53: "periwinkle",
 }
 
 # Additional game definitions

@@ -159,7 +159,11 @@ class PowerWidget(BaseDataWidget):
 
     def load_and_set_image(self):
         try:
-            pixmap = QPixmap(self.image_path).scaled(self.size, self.size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            pixmap = QPixmap(self.image_path)
+            if pixmap.isNull():
+                logging.warning("Image not found: %s", self.image_path)
+                return
+            pixmap = pixmap.scaled(self.size, self.size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
             colored_pixmap = QPixmap(pixmap.size())
             colored_pixmap.fill(Qt.transparent)
             painter = QPainter(colored_pixmap)
@@ -222,7 +226,11 @@ class NameWidget(BaseDataWidget):
 
     def load_and_set_image(self):
         try:
-            pixmap = QPixmap(self.image_path).scaled(self.size, self.size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            pixmap = QPixmap(self.image_path)
+            if pixmap.isNull():
+                logging.warning("Image not found: %s", self.image_path)
+                return
+            pixmap = pixmap.scaled(self.size, self.size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
             if self.image_color is not None:
                 colored_pixmap = QPixmap(pixmap.size())
                 colored_pixmap.fill(Qt.transparent)
@@ -274,7 +282,11 @@ class FlagWidget(QWidget):
 
     def load_and_set_image(self):
         try:
-            pixmap = QPixmap(self.image_path).scaled(
+            pixmap = QPixmap(self.image_path)
+            if pixmap.isNull():
+                logging.warning("Image not found: %s", self.image_path)
+                return
+            pixmap = pixmap.scaled(
                 self.size, self.size, Qt.KeepAspectRatio, Qt.SmoothTransformation
             )
             self.icon_label.setPixmap(pixmap)
@@ -313,9 +325,13 @@ class MoneySpentWidget(BaseDataWidget):
 
     def load_and_set_image(self):
         try:
+            pixmap = QPixmap(self.image_path)
+            if pixmap.isNull():
+                logging.warning("Image not found: %s", self.image_path)
+                return
             # Scale the icon using the current widget size (self.size)
-            pixmap = QPixmap(self.image_path).scaled(self.size, self.size,
-                                                     Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            pixmap = pixmap.scaled(self.size, self.size,
+                                  Qt.KeepAspectRatio, Qt.SmoothTransformation)
             
             # Apply text color to the icon
             colored_pixmap = QPixmap(pixmap.size())

@@ -27,6 +27,8 @@ class FactoryQueueItemWidget(QLabel):
         pix = QPixmap(path)
         if pix.isNull():
             logging.warning(f"Image not found for queued unit: {self.unit_name}")
+            self.scaled_pixmap = QPixmap()
+            return
         pix = pix.scaled(self.size, self.size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         self.scaled_pixmap = pix
         self.setFixedSize(self.scaled_pixmap.size())
